@@ -1,0 +1,5 @@
+To re-run all analyses and plots:
+a. download vectors from online sources and normalize by l2 norm
+b. set up parameters to run as in run_params.csv
+c. run changes_over_time.py
+d. run create_final_plots_main.py 
