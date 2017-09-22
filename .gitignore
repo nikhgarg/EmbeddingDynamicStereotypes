@@ -2,12 +2,8 @@
 *.xml
 .idea/*
 *.ipynb_checkpoints*
-data/*
-run_results/*
-*.txt
 *.pkl
 *.pdf
 *.png
 __pycache__*
 *.py.bak
-regressions/*
