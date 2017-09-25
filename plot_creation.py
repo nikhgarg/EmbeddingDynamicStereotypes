@@ -186,7 +186,7 @@ def identify_top_biases_individual(row, label='', neutral_words='', group1='male
 
     occup_differences_cossim = []
     occups_cossim = []
-
+    occup_raw_cossim = []
     for occup in row['indiv_distances_neutral_{}'.format(neutral_words)]:
         dif = differences(row['indiv_distances_neutral_{}'.format(neutral_words)][occup][
                           group2 + ''][7], row['indiv_distances_neutral_{}'.format(neutral_words)][occup][group1 + ''][7])
@@ -196,7 +196,6 @@ def identify_top_biases_individual(row, label='', neutral_words='', group1='male
 
         if any(np.isnan([dif[firstindex], dif[-1]])): continue
         occups_cossim.append(occup)
-        dif_rows_cossim.append(dif)
 
         occup_raw_cossim.append(dif[-1])
         occup_raw_cossim_allovertime.append(dif.tolist())
@@ -490,13 +489,87 @@ def overtime_scatter_errorusingallotheryears(x, y, years_all, label, xlabel='', 
     plt.savefig(plotsfolder + 'regression_allyears_withoutscatter{}.{}'.format(label, saveformat), dpi=1000)
     plt.close()
 
-def scatter_occupation_percents_distances(row, label, neutral_list_name = 'occupations1950', group1 = 'male_pairs', group2 = 'female_pairs', index = 0, occ_percents_file='../../data/occupation_percentages_gender_occ1950.csv', load_objective_data = load_occupationpercent_data, occ_func=occupation_func_percentfemale, ylim = [-6, 6], xlim = [-.15, .15], do_regression_with_counts = False, condensed_print = False, norm_type = 'norm', saveformat = 'pdf', toskip = []):
+def residual_analysis_with_stereotypes(row, label, neutral_list_name = 'occupations1950', group1 = 'male_pairs', group2 = 'female_pairs',  occ_percents_file='data/occupation_percentages_gender_occ1950.csv', load_objective_data = load_occupationpercent_data, occ_func=occupation_func_percentfemale, stereotype_file = 'data/mturk_stereotypes.csv', load_stereotype_data = load_mturkstereotype_data, norm_type = 'norm', saveformat = 'pdf'):
+
+    differences, differences_cossim = get_biases_individual(row, label=label, neutral_words=neutral_list_name, group1=group1, group2=group2)
+    occpercents, occ_weights = load_objective_data(occ_percents_file, occ_func, yrs_to_do=get_years_single(label))
+    stereotypescores = load_mturkstereotype_data(stereotype_file)
+
+    limitto = [o.strip() for o in list(open('data/' + 'occupationsMturk' + '.txt', 'r'))]
+
+    embedding_difs = []
+    occ_props = []
+    stereotype_scores = []
+    occupations_in_order = []
+
+    for occ in differences:
+        occ_fixed = occ.replace('p.n', '') #some encoding error
+        if occ not in differences or occ_fixed not in occpercents: continue
+        if occ_fixed not in limitto: continue
+        if not np.isnan(differences[occ][-1]) and not np.isnan(occpercents[occ_fixed][-1]):
+            embedding_difs.append(differences[occ][-1])
+            occ_props.append(occpercents[occ_fixed][-1])
+            stereotype_scores.append(stereotypescores[occ_fixed])
+            occupations_in_order.append(occ)
+
+    #scatter limited occupations (for which have turk scores): embeddings bias vs occupation percent
+    plot_scatter_and_regression(embedding_difs, occ_props,'{}{}_distancedifferencessameyear_vs_percents_{}{}{}{}'.format(label, get_years_single(label)[-1],neutral_list_name, group1, group2, 'occupationsMturk'),sizes = None,  xlabel = '{} Bias'.format(pretty_axis_labels[group2]), ylabel = occ_func.label, ylim = [-6, 6]\
+    , xlim = [-.15, .15], do_regression_with_counts = False, counts = None, condensed_print = False, saveformat = saveformat)
+
+    #scatter stereotype score vs occupation proportion
+    plot_scatter_and_regression(stereotype_scores, occ_props,'{}{}turkstereotypescores_vs_percents_{}{}{}'.format(label, get_years_single(label)[-1],neutral_list_name, group1, group2),sizes = None,  xlabel = 'Stereotype Score', ylabel = occ_func.label, ylim = [-6, 6]\
+    , xlim = [0, 4], do_regression_with_counts = False, counts = None, condensed_print = False, saveformat = saveformat)
+
+    #scatter stereotype score vs embedding bias
+    plot_scatter_and_regression(stereotype_scores, embedding_difs,'{}{}turkstereotypescores_vs_embedding_{}{}{}'.format(label, get_years_single(label)[-1],neutral_list_name, group1, group2),sizes = None,  ylabel = '{} Bias'.format(pretty_axis_labels[group2]), xlabel = "Stereotype Score", ylim = [-.15, .15]\
+    , xlim = [0, 4], do_regression_with_counts = False, counts = None, condensed_print = False, saveformat = saveformat)
+
+
+    #look at residuals of each vs occupation to see if correlated
+    resids_embedding = get_model_residuals(occ_props, embedding_difs)
+    resids_stereotypes = get_model_residuals(occ_props, stereotype_scores)
+    print('Pearson Correlation of residuals: {}'.format(pearsonr(resids_embedding, resids_stereotypes)))
+    order = np.argsort(resids_embedding)
+    for en in order:
+        print('{}: {:.2f}, {:.2f}'.format(occupations_in_order[en], resids_embedding[en], resids_stereotypes[en]))
+
+
+    #look at models for predicting embedding bias using either score, or both together
+    df = pd.DataFrame([embedding_difs, occ_props])
+    df = df.transpose()
+    df.columns = ['embedding bias', 'occupation proportion']
+    df['const'] = 1
+    model = sm.OLS(df['embedding bias'], df[['occupation proportion', 'const']]).fit()
+    print(model.summary().as_latex())
+    print(model.pvalues)
+
+    df = pd.DataFrame([embedding_difs, stereotype_scores])
+    df = df.transpose()
+    df.columns = ['embedding bias', 'stereotype_scores']
+    df['const'] = 1
+    model = sm.OLS(df['embedding bias'], df[['stereotype_scores', 'const']]).fit()
+    print(model.summary().as_latex())
+    print(model.pvalues)
+
+    df = pd.DataFrame([embedding_difs, occ_props, stereotype_scores])
+    df = df.transpose()
+    df.columns = ['embedding bias', 'occupation proportion', 'stereotype_scores']
+    df['const'] = 1
+    model = sm.OLS(df['embedding bias'], df[['occupation proportion', 'stereotype_scores', 'const']]).fit()
+    print(model.summary().as_latex())
+    print(model.pvalues)
+
+def scatter_occupation_percents_distances(row, label, neutral_list_name = 'occupations1950', group1 = 'male_pairs', group2 = 'female_pairs', index = 0, occ_percents_file='data/occupation_percentages_gender_occ1950.csv', load_objective_data = load_occupationpercent_data, occ_func=occupation_func_percentfemale, ylim = [-6, 6], xlim = [-.15, .15], do_regression_with_counts = False, condensed_print = False, norm_type = 'norm', saveformat = 'pdf', toskip = [], limitfile = None):
 
     differences, differences_cossim = get_biases_individual(row, label=label, neutral_words=neutral_list_name, group1=group1, group2=group2)
     occpercents, occ_weights = load_objective_data(occ_percents_file, occ_func, yrs_to_do=get_years_single(label))
 
     if do_regression_with_counts:
         counts_occupations = row['counts_all'][neutral_list_name]
+
+    limitto = None
+    if limitfile is not None:
+        limitto = [o.strip() for o in list(open('data/' + limitfile + '.txt', 'r'))]
 
     scatter_vals = [[], []]
     occ_freq_counts = []
@@ -507,6 +580,7 @@ def scatter_occupation_percents_distances(row, label, neutral_list_name = 'occup
         occ_fixed = occ.replace('p.n', '') #some encoding error
         if occ in toskip: continue
         if occ not in differences or occ_fixed not in occpercents: continue
+        if limitto is not None and occ_fixed not in limitto: continue
         if not np.isnan(differences[occ][index]) and not np.isnan(occpercents[occ_fixed][index]):
             scatter_vals[0].append(differences[occ][index])
             scatter_vals[1].append(occpercents[occ_fixed][index])
@@ -526,7 +600,7 @@ def scatter_occupation_percents_distances(row, label, neutral_list_name = 'occup
     print('most x axis negative: {}'.format([(occupations_in_order[en], scatter_vals[0][en], scatter_vals[1][en]) for en in np.argsort(scatter_vals[0])[0:5]]))
 
     if norm_type == 'norm':
-        plot_scatter_and_regression(scatter_vals[0], scatter_vals[1],'{}{}_distancedifferencessameyear_vs_percents_{}{}{}'.format(label, get_years_single(label)[index],neutral_list_name, group1, group2),sizes = scatter_sizes,  xlabel = '{} Bias'.format(pretty_axis_labels[group2]), ylabel = occ_func.label, ylim = ylim, xlim = xlim, do_regression_with_counts = do_regression_with_counts, counts = occ_freq_counts, condensed_print = condensed_print, saveformat = saveformat)
+        plot_scatter_and_regression(scatter_vals[0], scatter_vals[1],'{}{}_distancedifferencessameyear_vs_percents_{}{}{}{}'.format(label, get_years_single(label)[index],neutral_list_name, group1, group2, limitfile),sizes = scatter_sizes,  xlabel = '{} Bias'.format(pretty_axis_labels[group2]), ylabel = occ_func.label, ylim = ylim, xlim = xlim, do_regression_with_counts = do_regression_with_counts, counts = occ_freq_counts, condensed_print = condensed_print, saveformat = saveformat)
         return scatter_vals[0]
 
     else:
@@ -570,6 +644,13 @@ def get_biases_individual(row, label='', neutral_words='', group1='male', group2
                                                     occup][group2 + ''][7], row['indiv_distances_neutral_{}'.format(neutral_words)][occup][group1 + ''][7])
     return occ_differences_dist, occ_differences_cossim
 
+def get_model_residuals(x, y):
+    df = pd.DataFrame([y, x])
+    df = df.transpose()
+    df.columns = ['y', 'x']
+    df['const'] = 1
+    model = sm.OLS(df['y'], df[['x', 'const']]).fit()
+    return model.resid
 
 def plot_scatter_and_regression(x, y, label, xlabel = '', ylabel = '', sizes = None, ylim = None, xlim = None,do_regression_with_counts = False, counts = None, condensed_print = False, yrs_for_regression = None, saveformat = 'pdf', confidenceintervalsoff = False):
 

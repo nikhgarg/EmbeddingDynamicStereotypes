@@ -32,6 +32,7 @@ def main(filenametodo = 'run_results/finalrun.csv'):
         [print_most_biased_over_time, [rows['google'], 'google', 'occupations1950', 'male_pairs', 'female_pairs']],
         [print_most_biased_over_time, [rows['google'], 'google', 'personalitytraits_original', 'male_pairs', 'female_pairs']],
         [scatter_occupation_percents_distances, [rows['google'], 'google', 'occupations1950', 'male_pairs', 'female_pairs', -1,'data/occupation_percentages_gender_occ1950.csv',load_occupationpercent_data, occupation_func_percentfemale, [-6, 6], [-.15, .15], False, False, 'norm', 'png']],
+        [residual_analysis_with_stereotypes,[rows['google'], 'google', 'occupations1950', 'male_pairs', 'female_pairs',  'data/occupation_percentages_gender_occ1950.csv', load_occupationpercent_data, occupation_func_percentfemale, 'data/mturk_stereotypes.csv', load_mturkstereotype_data, 'norm', 'pdf']],
     ]
 
     plots_to_do_gender_dynamic = [
@@ -75,9 +76,9 @@ def main(filenametodo = 'run_results/finalrun.csv'):
     ]
 
     plots_to_do_appendix_raceasian_static = [
-    [identify_top_biases_individual_threegroups, [rows['google'], 'google', 'personalitytraits_original', 'names_hispanic', 'names_white','names_asian']
-    [identify_top_biases_individual_threegroups, [rows['google'], 'google', 'occupations1950', 'names_hispanic', 'names_white','names_asian']
-        [scatter_occupation_percents_distances, [rows['google'], 'google', 'occupations1950', 'names_white', 'names_asian', -1,'data/occupation_percentages_race_occ1950.csv',load_occupationpercent_data, occupation_func_percentwhiteasian, None, None, False, False, 'norm', 'pdf']],
+    [identify_top_biases_individual_threegroups, [rows['google'], 'google', 'personalitytraits_original', 'names_hispanic', 'names_white','names_asian']],
+    [identify_top_biases_individual_threegroups, [rows['google'], 'google', 'occupations1950', 'names_hispanic', 'names_white','names_asian']],
+    [scatter_occupation_percents_distances, [rows['google'], 'google', 'occupations1950', 'names_white', 'names_asian', -1,'data/occupation_percentages_race_occ1950.csv',load_occupationpercent_data, occupation_func_percentwhiteasian, None, None, False, False, 'norm', 'pdf']],
     ]
 
     plots_to_do_appendix_racehispanic_static = [
@@ -103,12 +104,6 @@ def main(filenametodo = 'run_results/finalrun.csv'):
         plot[0](*plot[1])
 
     set_plots_folder(plots_folder + 'race/')
-    for plot in plots_to_do_raceasian_static:
-        print(plot[0], plot[1][1:])
-        plot[0](*plot[1])
-    for plot in plots_to_do_racehispanic_static:
-        print(plot[0], plot[1][1:])
-        plot[0](*plot[1])
     for plot in plots_to_do_race_dynamic:
         print(plot[0], plot[1][1:])
         plot[0](*plot[1])
