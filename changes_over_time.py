@@ -229,8 +229,6 @@ def main(filenames, label, csvname = None, neutral_lists = [], group_lists = ['m
 
             d['indiv_distances_neutral_'+neut] = dloc_neutral
 
-    d['paper_verification'] = test_distances_from_paper_verification(vectors_over_time, vocabd)
-
     with open('run_results/'+csvname, 'ab') as cf:
         headerorder = ['datetime', 'label']
         headerorder.extend(sorted(list(d.keys())))
@@ -257,7 +255,7 @@ filename_map = {'sgns' : filenames_sgns, 'svd': filenames_svd, 'coha':filenames_
 
 if __name__ == "__main__":
     param_filename = 'run_params.csv'
-    
+
     with open(param_filename,'r') as f:
         reader = csv.DictReader(f)
         for row in reader:
