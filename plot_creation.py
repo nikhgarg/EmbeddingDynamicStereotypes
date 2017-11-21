@@ -21,7 +21,7 @@ from scipy.stats.stats import pearsonr
 sns.set(style="whitegrid") #TODO test this whitegrid, otherwise remove
 
 plotsfolder = 'plots/final/'
-pretty_axis_labels = {'male_pairs' : 'Male', 'female_pairs' : 'Female', 'names_asian' : 'Asian', 'names_wshite' : 'White', 'names_hispanic' : 'Hispanic'}
+pretty_axis_labels = {'male_pairs' : 'Man', 'female_pairs' : 'Woman', 'names_asian' : 'Asian', 'names_wshite' : 'White', 'names_hispanic' : 'Hispanic'}
 
 def set_plots_folder(folder):
     global plotsfolder

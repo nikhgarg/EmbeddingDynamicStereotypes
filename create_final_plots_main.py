@@ -19,7 +19,7 @@ import scipy
 from scipy.stats.stats import pearsonr
 from plot_creation import *
 
-pretty_axis_labels = {'male_pairs' : 'Male', 'female_pairs' : 'Female', 'names_asian' : 'Asian', 'names_white' : 'White', 'names_hispanic' : 'Hispanic'}
+pretty_axis_labels = {'male_pairs' : 'Man', 'female_pairs' : 'Woman', 'names_asian' : 'Asian', 'names_white' : 'White', 'names_hispanic' : 'Hispanic'}
 
 def main(filenametodo = 'run_results/finalrun.csv'):
     plots_folder = 'plots/main/'

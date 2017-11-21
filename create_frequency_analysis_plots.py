@@ -22,7 +22,7 @@ def main(filenametodo = 'run_results/finalrun.csv'):
     rows = load_file(filenametodo)
 
 def plot_mean_counts_together(row, label, wordlists, printlabel):
-    mapp = {'names_white' : "White names", 'names_hispanic' : "Hispanic names", 'names_asian' : "Asian names", 'names_black' : "Black names", 'male_pairs' : 'Male words', 'female_pairs' : 'Female words', 'occupations1950': 'Occupations', 'adjectives_williamsbest': 'Adjectives from Williams and Best', 'personalitytraits_original': 'Personality Traits', 'names_russian': "Russian names"}
+    mapp = {'names_white' : "White names", 'names_hispanic' : "Hispanic names", 'names_asian' : "Asian names", 'names_black' : "Black names", 'male_pairs' : 'Words associated with men', 'female_pairs' : 'Words associated with women', 'occupations1950': 'Occupations', 'adjectives_williamsbest': 'Adjectives from Williams and Best', 'personalitytraits_original': 'Personality Traits', 'names_russian': "Russian names"}
 
     for wordlist in wordlists:
         means = []
