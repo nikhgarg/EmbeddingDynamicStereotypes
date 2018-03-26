@@ -13,16 +13,29 @@ import sys
 latexify.latexify()
 csv.field_size_limit(int(2**30))
 
-def occupation_func_percentfemale(row):
-    occupation_func_percentfemale.label = 'Female Occupation Proportion'
+def occupation_func_female_logitprop(row):
+    occupation_func_female_logitprop.label = 'Women Occupation Logit Prop'
+    occupation_func_female_logitprop.savelabel = 'WomenOccupationLogProp'
+
     p = float(row['Female'])
     if p < 1e-5 or p > 1-1e-5: return None
 
     return np.log(p / (1 - p))
 
+def occupation_func_female_percent(row):
+    occupation_func_female_percent.label = 'Women Occupation $\\%$ Difference'
+    occupation_func_female_percent.savelabel = 'WomenOccupRelativePer'
+
+    p = float(row['Female'])
+
+    return (2*p - 1)*100 #percent minority - percent majority
+
 bad_occupations = ['smith', 'conductor']
-def occupation_func_percentwhitehispanic(row):
-    occupation_func_percentwhitehispanic.label = 'Hispanic Occupation Proportion'
+
+def occupation_func_whitehispanic_logitprop(row):
+    occupation_func_whitehispanic_logitprop.label = 'Hispanic Occupation Logit Prop'
+    occupation_func_whitehispanic_logitprop.savelabel = 'HispanicOccupationLogProp'
+
     if row['Occupation'] in bad_occupations: return None
     p = float(row['hispanic'])/(float(row['hispanic']) + float(row['white']) + 1e-5)
     if p < 1e-4 or p > 1-1e-4: return None
@@ -30,19 +43,28 @@ def occupation_func_percentwhitehispanic(row):
     p =  np.log(p/(1-p))
     if p > 5: return None
     return p
-def occupation_func_percentwhiteblack(row):
-    occupation_func_percentwhiteblack.label = 'Black Occupation Proportion'
+
+def occupation_func_whitehispanic_percent(row):
+    occupation_func_whitehispanic_percent.label = 'Hispanic Occupation $\\%$ Difference'
+    occupation_func_whitehispanic_percent.savelabel = 'HispanicOccupRelativePer'
+
     if row['Occupation'] in bad_occupations: return None
 
-    p = float(row['black'])/(float(row['black']) + float(row['white'])+ 1e-5)
-    if p < 1e-4 or p > 1-1e-4: return None
+    p = float(row['hispanic'])/(float(row['hispanic']) + float(row['white']) + 1e-5)
+    return (2*p - 1)*100#p*100#(p - p_white)*100 #percent minority - percent majority
 
-    p =  np.log(p/(1-p))
-    if p > 5: return None
-    return p
+def load_mturkstereotype_data(filename):
+    dd = {}
+    with open(filename, 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            dd[row['occupation']] = float(row['stereotype_score']) - 2 #center
+    return dd
 
-def occupation_func_percentwhiteasian(row):
-    occupation_func_percentwhiteasian.label = 'Asian Occupation Proportion'
+def occupation_func_whiteasian_logitprop(row):
+    occupation_func_whiteasian_logitprop.label = 'Asian Occupation Logit Prop'
+    occupation_func_whiteasian_logitprop.savelabel = 'AsianOccupationProportion'
+
     if row['Occupation'] in bad_occupations: return None
 
     p = float(row['asian'])/(float(row['asian']) + float(row['white'])+ 1e-5)
@@ -51,6 +73,15 @@ def occupation_func_percentwhiteasian(row):
     p =  np.log(p/(1-p))
     if p > 5: return None
     return p
+
+def occupation_func_whiteasian_percent(row):
+    occupation_func_whiteasian_percent.label = 'Asian Occupation $\\%$ Difference'
+    occupation_func_whiteasian_percent.savelabel = 'AsianOccupRelativeProp'
+
+    if row['Occupation'] in bad_occupations: return None
+
+    p = float(row['asian'])/(float(row['asian']) + float(row['white'])+ 1e-5)
+    return (2*p - 1)*100
 
 def load_williamsbestadjectives(filename, otherfunc, yrs_to_do = None):
     d = {}
@@ -71,6 +102,8 @@ def load_williamsbestadjectives(filename, otherfunc, yrs_to_do = None):
 
 def occupation_func_williamsbestadject(row):
     occupation_func_williamsbestadject.label = 'Human Stereotype Score'
+    occupation_func_williamsbestadject.savelabel = 'HSS'
+
     return float(row['transformed_score'].strip())
 
 def load_occupationpercent_data(filename, occupation_func, yrs_to_do=list(range(1950, 2000, 10))):
@@ -103,7 +136,14 @@ def load_occupationpercent_data(filename, occupation_func, yrs_to_do=list(range(
 
 from scipy.stats import linregress
 
-
+def load_files(filenames):
+    rows = {}
+    for f in filenames:
+        r = load_file(f)
+        print(r.keys())
+        for d in r:
+            rows[d] = r[d]
+    return rows
 def load_file(filename):
     rows = {}
     with open(filename, 'r') as f:

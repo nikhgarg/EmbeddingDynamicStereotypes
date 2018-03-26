@@ -21,7 +21,7 @@ from scipy.stats.stats import pearsonr
 sns.set(style="whitegrid") #TODO test this whitegrid, otherwise remove
 
 plotsfolder = 'plots/final/'
-pretty_axis_labels = {'male_pairs' : 'Man', 'female_pairs' : 'Woman', 'names_asian' : 'Asian', 'names_wshite' : 'White', 'names_hispanic' : 'Hispanic'}
+pretty_axis_labels = {'male_pairs' : 'Men', 'female_pairs' : 'Women', 'names_asian' : 'Asian', 'names_white' : 'White', 'names_hispanic' : 'Hispanic', 'words_islam' : "Islam", 'words_christianity': 'Christianity'}
 
 def set_plots_folder(folder):
     global plotsfolder
@@ -55,15 +55,10 @@ def do_over_time_trend_test(row, label='', neutral_words='', group1='male', grou
 
         done_occups.append(occup)
 
-    sns.regplot(x=np.array(years_all), y=np.array(occ_differences_dist), scatter = True)
-    plt.xlabel('Yr')
-    plt.ylabel('Bias'.format)
-    plt.tight_layout()
-    plt.savefig(plotsfolder + 'trendtest_{}{}{}{}{}{}.{}'.format(label,neutral_words,limit_words_file,stryrstodo,group1, group2, saveformat), dpi=1000)
-    plt.close()
+    plot_scatter_and_regression(x=np.array(years_all), y=np.array(occ_differences_dist), label = 'trendtest_{}{}{}{}{}{}.{}'.format(label,neutral_words,limit_words_file,stryrstodo,group1, group2, saveformat),\
+     xlabel = 'Year', ylabel = 'Embedding Bias')
 
-    print((linregress(years_all, occ_differences_dist)))
-def plot_averagebias_over_time_consistentoccupations(row, label='', neutral_words='', group1='male', group2='female', overlay_with_occ_percents = False, occ_percents_file = None, occ_func = None, shift=0, limit_to_certain_words = False, limit_words_file = '', ylim1 = None, ylim2 = None, normalize_by_pairsdist = False, pairs_dist_row_file = 'run_results/finalrun.csv', yrs_to_do=None):
+def plot_averagebias_over_time_consistentoccupations(row, label='', neutral_words='', group1='male', group2='female', overlay_with_occ_percents = False, occ_percents_file = None, occ_func = None, shift=0, limit_to_certain_words = False, limit_words_file = '', ylim1 = None, ylim2 = None, normalize_by_pairsdist = False, pairs_dist_row_file = 'run_results/finalrun.csv', yrs_to_do=None, shift_yrs_plot_labels = 0):
     yrs = get_years(label)
     if yrs is None:
         return
@@ -95,7 +90,7 @@ def plot_averagebias_over_time_consistentoccupations(row, label='', neutral_word
     for occup in row['indiv_distances_neutral_{}'.format(neutral_words)]:
         if limit_to_certain_words and occup not in limit_words: continue
         if overlay_with_occ_percents and occup not in occpercents: continue
-        if any(np.isnan(occpercents[occup])):continue
+        if overlay_with_occ_percents and any(np.isnan(occpercents[occup])):continue
         difs = differences(row['indiv_distances_neutral_{}'.format(neutral_words)][occup][
                                     group1 + ''][4], row['indiv_distances_neutral_{}'.format(neutral_words)][occup][group2 + ''][4])[shift:]
         if any(np.isnan(difs)):continue
@@ -108,22 +103,33 @@ def plot_averagebias_over_time_consistentoccupations(row, label='', neutral_word
 
     arembed = np.array(occ_differences_dist)
     if shift!=0: yrs= yrs[0:-shift]
-    sns.tsplot(arembed, time=yrs, estimator=np.nanmean, ax = ax1)
+    yrs_plot = [x + shift_yrs_plot_labels for x in yrs]
+    sns.tsplot(arembed, time=yrs_plot, estimator=np.nanmean, ax = ax1)
 
     if overlay_with_occ_percents:
         ar = [[occpercents[x][en] for en,yr in enumerate(yrs) if yr in yrs_to_do] for x in done_occups]
-        sns.tsplot(ar, time=yrs, estimator=np.nanmean, ax = ax2, color = 'g')#, marker = "o", condition = 'Avg. {}'.format(occ_func.label))#, err_style='ci_bars')
+        sns.tsplot(ar, time=yrs_plot, estimator=np.nanmean, ax = ax2, color = 'g')#, marker = "o", condition = 'Avg. {}'.format(occ_func.label))#, err_style='ci_bars')
         arr = np.array(ar)
-        ax2.plot(yrs,[np.nanmean(arr[:,yren]) for yren in range(len(yrs))], color = 'g', marker = "o", label = 'Avg. {}'.format(occ_func.label), markersize=7, linewidth = 2)#, err_style='ci_bars')
+        ax2.plot(yrs_plot,[np.nanmean(arr[:,yren]) for yren in range(len(yrs))], color = 'g', marker = "o", label = 'Avg. {}'.format(occ_func.label), markersize=7, linewidth = 2)#, err_style='ci_bars')
         plt.ylabel('Avg. {}'.format(occ_func.label), color = 'g')
-    ax1.plot(yrs,[np.nanmean(arembed[:,yren]) for yren in range(len(yrs))], color = 'b', marker = "o", label = 'Avg. {} Bias'.format(pretty_axis_labels[group2]), markersize=7, linewidth = 2)#, err_style='ci_bars')
+    ax1.plot(yrs_plot,[np.nanmean(arembed[:,yren]) for yren in range(len(yrs))], color = 'b', marker = "o", label = 'Avg. {} Bias'.format(pretty_axis_labels[group2]), markersize=7, linewidth = 2)#, err_style='ci_bars')
 
     h1, l1 = ax1.get_legend_handles_labels()
-    h2, l2 = ax2.get_legend_handles_labels()
-    ax1.legend(h1+h2, l1+l2)
+    if overlay_with_occ_percents:
+        h2, l2 = ax2.get_legend_handles_labels()
+        ax1.legend(h1+h2, l1+l2)
+        sns.despine(right = False)
+    else:
+        ax1.legend(h1, l1)
+        sns.despine()
     plt.tight_layout()
-    plt.savefig(plotsfolder + '{}{}{}{}{}{}_CONSISTENToccupationbiases_with_error_{}.pdf'.format(
-        label, neutral_words, limit_words_file, group1, group2,normalize_by_pairsdist, 'normdistanceaveragegroup'))
+    plt.grid(b = True)
+    if occ_func is None:
+        occfuncstr = 'None'
+    else:
+        occfuncstr = occ_func.savelabel
+    plt.savefig(plotsfolder + '{}{}{}{}{}{}{}_overtimebiases_{}.pdf'.format(
+        label, neutral_words, limit_words_file, group1, group2,normalize_by_pairsdist, occfuncstr, 'norm'))
     plt.close()
 
 def identify_top_biases_individual_threegroups(row, label='', neutral_words='', group1='names_hispanic', group2='names_white', group3 = 'names_asian', index = -1):
@@ -342,6 +348,24 @@ def static_cross_correlation_table(rows, labels, neutral_list_name = 'occupation
                 corr, pvalue  = pearsonr(differences_all_lists[en1], differences_all_lists[en2])
                 print("{}{}{} vs {}{}{}: corr: {} ({})".format(labels[en1], norm_types[en1], indices[en1], labels[en2], norm_types[en2], indices[en2], corr, pvalue))
 
+def test_phase_shift_heatmap(yrs_to_include, heatmap):
+    adjacent_difs_to_test = [[] for _ in range(len(yrs_to_include)-1)]
+    for en1 in range(len(yrs_to_include)-1):
+        for end in range(len(heatmap[en1,:])):
+            adjacent_difs_to_test[en1].append(abs(heatmap[en1+1,end] - heatmap[en1,end]))
+    for current_checking in range(len(yrs_to_include)-1):
+        print('current checking: ', current_checking)
+        adjacent_difs_actualtestones = adjacent_difs_to_test[current_checking]# for x in yr_indices_to_check_change]
+        all_others = []
+        for i in range(len(yrs_to_include)-1):
+            if i is not current_checking:
+                all_others.extend(adjacent_difs_to_test[i])
+#         plt.hist([adjacent_difs_actualtestones, all_others], normed = True)
+#         plt.show()
+
+        print(scipy.stats.ks_2samp(adjacent_difs_actualtestones, all_others)[1])
+
+
 def create_cross_time_correlation_heatmap_differencestoself(row, label='', neutral_words='', group1='', group2 = '', yrs_to_include = None, saveformat = 'png'):
     # 1. Identify list of occupations that are present at every time step
     # 2. For each year, create a rank of relative distances, rank of log proportions
@@ -361,7 +385,6 @@ def create_cross_time_correlation_heatmap_differencestoself(row, label='', neutr
         consistent_neutral_words_list.append(occup)
         for en, i in enumerate(indices_to_do):
             difs_by_year[en].append(difs[i])
-
     heatmap = np.zeros((len(yrs_to_include), len(yrs_to_include)))
     heatmap_pvalues = np.zeros((len(yrs_to_include), len(yrs_to_include)))
     for en1 in range(len(yrs_to_include)):
@@ -371,8 +394,9 @@ def create_cross_time_correlation_heatmap_differencestoself(row, label='', neutr
             # heatmap[en1, en2], heatmap_pvalues[en1, en2]  = kendalltau(xrank, yrank)
             heatmap[en1, en2], heatmap_pvalues[en1, en2]  = pearsonr(difs_by_year[en1], difs_by_year[en2])
             # heatmap[en1, en2], heatmap_pvalues[en1, en2]  = scipy.stats.spearmanr(xrank, yrank)
-    print(difs_by_year)
-    print(heatmap)
+#     print(difs_by_year)
+#     print(heatmap)
+    test_phase_shift_heatmap(yrs_to_include, heatmap)
     axx = sns.heatmap(heatmap, annot = True, fmt = ".2f", xticklabels = yrs_to_include, yticklabels = yrs_to_include, robust = True, cbar = False, cmap = 'YlGnBu', annot_kws={"color": 'black'})
     # plt.xlabel('Year')
     # plt.ylabel('Year')
@@ -382,6 +406,7 @@ def create_cross_time_correlation_heatmap_differencestoself(row, label='', neutr
     for labelll in axx.get_xticklabels():
         labelll.set_size(11)
         labelll.set_weight("bold")
+    plt.yticks(rotation=0)
     plt.tight_layout()
     plt.savefig(plotsfolder + 'correlationheatmap_distancestoself{}{}{}{}.{}'.format(
         label, neutral_words, group1, group2, saveformat), dpi = 1000)
@@ -422,30 +447,32 @@ def plot_overtime_scatter(row, label='', neutral_words='', group1='male', group2
             occpercents_all.append(occpercents[occup][ind])
             yrs_all.append(yr)
 
-    plot_scatter_and_regression(occ_dist_all, occpercents_all, 'all_differences_dynamic{}{}{}{}{}'.format(label, neutral_words, group1, group2,normalize_by_pairsdist), xlabel = '{} Bias'.format(pretty_axis_labels[group2]), ylabel = occ_func.label, sizes = None, ylim = None, xlim = None,do_regression_with_counts = False, counts = None, condensed_print = True, yrs_for_regression = yrs_all, saveformat = 'png')
+#     plot_scatter_and_regression(occpercents_all, occ_dist_all, 'all_differences_dynamic{}{}{}{}{}'.format(label, neutral_words, group1, group2,normalize_by_pairsdist), ylabel = '{} Bias'.format(pretty_axis_labels[group2]), xlabel = occ_func.label, sizes = None, ylim = None, xlim = None,do_regression_with_counts = False, counts = None, condensed_print = True, yrs_for_regression = yrs_all, saveformat = 'png')
 
-    plot_scatter_and_regression(occ_dist_all, occpercents_all, 'all_differences_dynamic{}{}{}{}{}'.format(label, neutral_words, group1, group2,normalize_by_pairsdist), xlabel = '{} Bias'.format(pretty_axis_labels[group2]), ylabel = occ_func.label, sizes = None, ylim = None, xlim = None,do_regression_with_counts = False, counts = None, condensed_print = True, yrs_for_regression = yrs_all, saveformat = 'pdf')
+    plot_scatter_and_regression(occpercents_all, occ_dist_all, 'all_differences_dynamic{}{}{}{}{}'.format(label, neutral_words, group1, group2,normalize_by_pairsdist), ylabel = '{} Bias'.format(pretty_axis_labels[group2]), xlabel = occ_func.label, sizes = None, ylim = None, xlim = None,do_regression_with_counts = False, counts = None, condensed_print = True, yrs_for_regression = yrs_all, saveformat = 'pdf')
 
     # plot_scatter_and_regression(occ_dist_all, occpercents_all, 'all_differences_dynamic{}{}{}{}{}'.format(label, neutral_words, group1, group2,normalize_by_pairsdist), xlabel = '{} Bias'.format(pretty_axis_labels[group2]), ylabel = occ_func.label, sizes = None, ylim = None, xlim = None,do_regression_with_counts = False, counts = None, condensed_print = True, yrs_for_regression = yrs_all, saveformat = 'pdf', confidenceintervalsoff = True)
 
 
     individual_regression_coefficients_for_overtime_scatter(occ_dist_all, occpercents_all, yrs_all, 'all_differences_dynamic{}{}{}{}{}'.format(label, neutral_words, group1, group2,normalize_by_pairsdist))
 
-    overtime_scatter_errorusingallotheryears(occ_dist_all, occpercents_all, yrs_all, 'all_differences_dynamic{}{}{}{}{}'.format(label, neutral_words, group1, group2,normalize_by_pairsdist), xlabel = '{} Bias'.format(pretty_axis_labels[group2]), ylabel = occ_func.label)
+    overtime_scatter_errorusingallotheryears(occpercents_all, occ_dist_all, yrs_all, 'all_differences_dynamic{}{}{}{}{}'.format(label, neutral_words, group1, group2,normalize_by_pairsdist), ylabel = '{} Bias'.format(pretty_axis_labels[group2]), xlabel = occ_func.label)
 
 
 def individual_regression_coefficients_for_overtime_scatter(occup_distances_all, occup_percents_all, years_all, label):
     #train a separate model for each year, report the coefficient, r^2, and p-value for each year in a table in the appendix
     yrs_order = list(sorted(set(years_all)))
+    print('{} & {} & {} & {} & {} & {} \\\\'.format('Year', 'r^2', 'coefficient p-value', 'coefficient value', 'intercept p-value', 'intercept value') )
     for yr in yrs_order:
-        x = [occup_distances_all[en] for en in range(len(occup_distances_all)) if years_all[en] == yr]
-        y = [occup_percents_all[en] for en in range(len(occup_percents_all)) if years_all[en] == yr]
+        y = [occup_distances_all[en] for en in range(len(occup_distances_all)) if years_all[en] == yr]
+        x = [occup_percents_all[en] for en in range(len(occup_percents_all)) if years_all[en] == yr]
         df = pd.DataFrame([y, x])
         df = df.transpose()
-        df.columns = ['occup percent', 'vector similarity']
+        df.columns = ['embedding bias', 'occup percent']
         df['const'] = 1
-        model = sm.OLS(df['occup percent'], df[['vector similarity', 'const']]).fit()
-        print('{}: {}'.format(yr, summarize_model(model)))
+        model = sm.OLS(df['embedding bias'], df[['occup percent', 'const']]).fit()
+        print('{} & ${:.4}$ & ${:.4}$ & ${:.4} \pm {:.4}$& ${:.4}$ & ${:.4} \pm {:.4}$\\\\'.format(yr,model.rsquared,model.pvalues[0], model.params[0], model.bse[0],model.pvalues[1], model.params[1], model.bse[1] )) # summarize_model(model)
+
 
 def overtime_scatter_errorusingallotheryears(x, y, years_all, label, xlabel='', ylabel='', saveformat='pdf'):
     df = pd.DataFrame([y, x])
@@ -456,11 +483,12 @@ def overtime_scatter_errorusingallotheryears(x, y, years_all, label, xlabel='', 
 
     yrs_order = list(sorted(set(years_all)))
     pallete = sns.color_palette("hls", len(yrs_order))
+    print('{} & {} & {} \\\\'.format('Year', 'MSE using own model', 'MSE using model from other years') )
     for enn, yr in enumerate(yrs_order):
         #train model on specific year only, get MSE;
         xloc_thisyear = [x[en] for en in range(len(x)) if years_all[en] == yr]
         yloc_thisyear = [y[en] for en in range(len(y)) if years_all[en] == yr]
-        sns.regplot(x=np.array(xloc_thisyear), y=np.array(yloc_thisyear), scatter = True, color= pallete[enn], ci = None,scatter_kws={'s':1})
+        sns.regplot(x=np.array(xloc_thisyear), y=np.array(yloc_thisyear), scatter = True, color= pallete[enn],scatter_kws={'s':10})
 
         df = pd.DataFrame([yloc_thisyear, xloc_thisyear])
         df = df.transpose()
@@ -481,15 +509,17 @@ def overtime_scatter_errorusingallotheryears(x, y, years_all, label, xlabel='', 
 
         #then on all years.
         mse_forallyears = np.average(np.power(np.subtract(yloc_thisyear, [yy for en, yy in enumerate(model_allyears.fittedvalues) if years_all[en] == yr]), 2))
-        print('{} & {:.3f} & {:.2f} & {:.2f} \\\\'.format(yr, model_thisyear.rsquared, mse_thisyear, mse_forallyears) )
+        print('{} & ${:.4}$ & ${:.4}$ \\\\'.format(yr, mse_thisyear, mse_forallyears) )
     sns.regplot(x=np.array(x), y=np.array(y), scatter = False, color= 'b')
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.tight_layout()
+    plt.grid(b = True)
+    sns.despine()
     plt.savefig(plotsfolder + 'regression_allyears_withoutscatter{}.{}'.format(label, saveformat), dpi=1000)
     plt.close()
 
-def residual_analysis_with_stereotypes(row, label, neutral_list_name = 'occupations1950', group1 = 'male_pairs', group2 = 'female_pairs',  occ_percents_file='data/occupation_percentages_gender_occ1950.csv', load_objective_data = load_occupationpercent_data, occ_func=occupation_func_percentfemale, stereotype_file = 'data/mturk_stereotypes.csv', load_stereotype_data = load_mturkstereotype_data, norm_type = 'norm', saveformat = 'pdf'):
+def residual_analysis_with_stereotypes(row, label, neutral_list_name = 'occupations1950', group1 = 'male_pairs', group2 = 'female_pairs',  occ_percents_file='data/occupation_percentages_gender_occ1950.csv', load_objective_data = load_occupationpercent_data, occ_func=occupation_func_female_percent, stereotype_file = 'data/mturk_stereotypes.csv', load_stereotype_data = load_mturkstereotype_data, norm_type = 'norm', saveformat = 'pdf'):
 
     differences, differences_cossim = get_biases_individual(row, label=label, neutral_words=neutral_list_name, group1=group1, group2=group2)
     occpercents, occ_weights = load_objective_data(occ_percents_file, occ_func, yrs_to_do=get_years_single(label))
@@ -513,27 +543,33 @@ def residual_analysis_with_stereotypes(row, label, neutral_list_name = 'occupati
             occupations_in_order.append(occ)
 
     #scatter limited occupations (for which have turk scores): embeddings bias vs occupation percent
-    plot_scatter_and_regression(embedding_difs, occ_props,'{}{}_distancedifferencessameyear_vs_percents_{}{}{}{}'.format(label, get_years_single(label)[-1],neutral_list_name, group1, group2, 'occupationsMturk'),sizes = None,  xlabel = '{} Bias'.format(pretty_axis_labels[group2]), ylabel = occ_func.label, ylim = [-6, 6]\
-    , xlim = [-.15, .15], do_regression_with_counts = False, counts = None, condensed_print = False, saveformat = saveformat)
+    plot_scatter_and_regression(occ_props, embedding_difs,'{}{}_distancedifferencessameyear_vs_percents_{}{}{}{}'.format(label, get_years_single(label)[-1],neutral_list_name, group1, group2, 'occupationsMturk'),sizes = None,  ylabel = '{} Bias'.format(pretty_axis_labels[group2]), xlabel = occ_func.label, xlim = None\
+    , ylim = None, do_regression_with_counts = False, counts = None, condensed_print = False, saveformat = saveformat, includesquared = False)
 
     #scatter stereotype score vs occupation proportion
-    plot_scatter_and_regression(stereotype_scores, occ_props,'{}{}turkstereotypescores_vs_percents_{}{}{}'.format(label, get_years_single(label)[-1],neutral_list_name, group1, group2),sizes = None,  xlabel = 'Stereotype Score', ylabel = occ_func.label, ylim = [-6, 6]\
-    , xlim = [0, 4], do_regression_with_counts = False, counts = None, condensed_print = False, saveformat = saveformat)
+    plot_scatter_and_regression(occ_props,stereotype_scores,'{}{}turkstereotypescores_vs_percents_{}{}{}'.format(label, get_years_single(label)[-1],neutral_list_name, group1, group2),sizes = None,  ylabel = 'Stereotype Score', xlabel = occ_func.label, xlim = None\
+    , ylim = None, do_regression_with_counts = False, counts = None, condensed_print = False, saveformat = saveformat, includesquared = False)
 
     #scatter stereotype score vs embedding bias
     plot_scatter_and_regression(stereotype_scores, embedding_difs,'{}{}turkstereotypescores_vs_embedding_{}{}{}'.format(label, get_years_single(label)[-1],neutral_list_name, group1, group2),sizes = None,  ylabel = '{} Bias'.format(pretty_axis_labels[group2]), xlabel = "Stereotype Score", ylim = [-.15, .15]\
-    , xlim = [0, 4], do_regression_with_counts = False, counts = None, condensed_print = False, saveformat = saveformat)
+    , xlim = None, do_regression_with_counts = False, counts = None, condensed_print = False, saveformat = saveformat, includesquared = False)
 
+    print('occupations: ', str(occupations_in_order))
 
     #look at residuals of each vs occupation to see if correlated
-    resids_embedding = get_model_residuals(occ_props, embedding_difs)
-    resids_stereotypes = get_model_residuals(occ_props, stereotype_scores)
+    resids_embedding = get_model_residuals(embedding_difs, occ_props)
+    resids_stereotypes = get_model_residuals(stereotype_scores, occ_props)
     print('Pearson Correlation of residuals: {}'.format(pearsonr(resids_embedding, resids_stereotypes)))
     order = np.argsort(resids_embedding)
     for en in order:
         print('{}: {:.2f}, {:.2f}'.format(occupations_in_order[en], resids_embedding[en], resids_stereotypes[en]))
 
-
+    # print('Residuals vs x values:')
+    # print(pearsonr(resids_embedding, occ_props))
+    # print(pearsonr(resids_stereotypes, occ_props))
+    # print('Residuals vs y values:')
+    # print(pearsonr(resids_embedding, embedding_difs))
+    # print(pearsonr(resids_stereotypes, stereotype_scores))
     #look at models for predicting embedding bias using either score, or both together
     df = pd.DataFrame([embedding_difs, occ_props])
     df = df.transpose()
@@ -559,7 +595,7 @@ def residual_analysis_with_stereotypes(row, label, neutral_list_name = 'occupati
     print(model.summary().as_latex())
     print(model.pvalues)
 
-def scatter_occupation_percents_distances(row, label, neutral_list_name = 'occupations1950', group1 = 'male_pairs', group2 = 'female_pairs', index = 0, occ_percents_file='data/occupation_percentages_gender_occ1950.csv', load_objective_data = load_occupationpercent_data, occ_func=occupation_func_percentfemale, ylim = [-6, 6], xlim = [-.15, .15], do_regression_with_counts = False, condensed_print = False, norm_type = 'norm', saveformat = 'pdf', toskip = [], limitfile = None):
+def scatter_occupation_percents_distances(row, label, neutral_list_name = 'occupations1950', group1 = 'male_pairs', group2 = 'female_pairs', index = 0, occ_percents_file='data/occupation_percentages_gender_occ1950.csv', load_objective_data = load_occupationpercent_data, occ_func=occupation_func_female_percent, ylim = [-6, 6], xlim = [-.15, .15], do_regression_with_counts = False, condensed_print = False, norm_type = 'norm', saveformat = 'pdf', toskip = [], limitfile = None):
 
     differences, differences_cossim = get_biases_individual(row, label=label, neutral_words=neutral_list_name, group1=group1, group2=group2)
     occpercents, occ_weights = load_objective_data(occ_percents_file, occ_func, yrs_to_do=get_years_single(label))
@@ -594,13 +630,13 @@ def scatter_occupation_percents_distances(row, label, neutral_list_name = 'occup
     # get_highest_residual_occupations(copy.copy(scatter_vals[0]), copy.copy(scatter_vals[1]), group1, group2, occupations_in_order)
 
     print('most extreme values in each direction (for labeling)')
-    print('most y axis positive: {}'.format([(occupations_in_order[en], scatter_vals[0][en], scatter_vals[1][en]) for en in np.argsort(scatter_vals[1])[::-1][0:5]]))
-    print('most y axis negative: {}'.format([(occupations_in_order[en], scatter_vals[0][en], scatter_vals[1][en]) for en in np.argsort(scatter_vals[1])[0:5]]))
-    print('most x axis positive: {}'.format([(occupations_in_order[en], scatter_vals[0][en], scatter_vals[1][en]) for en in np.argsort(scatter_vals[0])[::-1][0:5]]))
-    print('most x axis negative: {}'.format([(occupations_in_order[en], scatter_vals[0][en], scatter_vals[1][en]) for en in np.argsort(scatter_vals[0])[0:5]]))
+    print('most x axis positive: {}'.format([(occupations_in_order[en], scatter_vals[0][en], scatter_vals[1][en]) for en in np.argsort(scatter_vals[1])[::-1][0:5]]))
+    print('most x axis negative: {}'.format([(occupations_in_order[en], scatter_vals[0][en], scatter_vals[1][en]) for en in np.argsort(scatter_vals[1])[0:5]]))
+    print('most y axis positive: {}'.format([(occupations_in_order[en], scatter_vals[0][en], scatter_vals[1][en]) for en in np.argsort(scatter_vals[0])[::-1][0:5]]))
+    print('most y axis negative: {}'.format([(occupations_in_order[en], scatter_vals[0][en], scatter_vals[1][en]) for en in np.argsort(scatter_vals[0])[0:5]]))
 
     if norm_type == 'norm':
-        plot_scatter_and_regression(scatter_vals[0], scatter_vals[1],'{}{}_distancedifferencessameyear_vs_percents_{}{}{}{}'.format(label, get_years_single(label)[index],neutral_list_name, group1, group2, limitfile),sizes = scatter_sizes,  xlabel = '{} Bias'.format(pretty_axis_labels[group2]), ylabel = occ_func.label, ylim = ylim, xlim = xlim, do_regression_with_counts = do_regression_with_counts, counts = occ_freq_counts, condensed_print = condensed_print, saveformat = saveformat)
+        plot_scatter_and_regression(scatter_vals[1],scatter_vals[0],'{}{}_distancedifferencessameyear_vs_percents_{}{}{}{}{}'.format(label, get_years_single(label)[index],neutral_list_name, group1, group2, limitfile,occ_func.savelabel),sizes = scatter_sizes,  ylabel = '{} Bias'.format(pretty_axis_labels[group2]), xlabel = occ_func.label, ylim = ylim, xlim = xlim, do_regression_with_counts = do_regression_with_counts, counts = occ_freq_counts, condensed_print = condensed_print, saveformat = saveformat)
         return scatter_vals[0]
 
     else:
@@ -645,14 +681,58 @@ def get_biases_individual(row, label='', neutral_words='', group1='male', group2
     return occ_differences_dist, occ_differences_cossim
 
 def get_model_residuals(x, y):
-    df = pd.DataFrame([y, x])
+    df = pd.DataFrame([y, x, [xx*xx for xx in x]])
     df = df.transpose()
-    df.columns = ['y', 'x']
+    df.columns = ['y', 'x', 'x_squared']
     df['const'] = 1
-    model = sm.OLS(df['y'], df[['x', 'const']]).fit()
+    model = sm.OLS(df['y'], df[['x', 'x_squared', 'const']]).fit()
     return model.resid
 
-def plot_scatter_and_regression(x, y, label, xlabel = '', ylabel = '', sizes = None, ylim = None, xlim = None,do_regression_with_counts = False, counts = None, condensed_print = False, yrs_for_regression = None, saveformat = 'pdf', confidenceintervalsoff = False):
+def princeton_trilogy_plots(row, label, group1em, group2em, group2princeton):
+    differences, differences_cossim = get_biases_individual(row, label=label, neutral_words='adjectives_princeton', group1=group1em, group2=group2em)
+#     print(differences)
+    yr_strings = ['1930', '1950', '1960']
+    yr_indices = [2, 4, 5]
+    #load the stereotypes csv file
+    sscores = {}
+    with open('data/adjectives_princeton.txt', 'r') as f:
+        allwords = [x[0] for x in list(csv.reader(f))]
+    with open('data/princeton_stereotypes.csv', 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            yrdict = sscores.get(row['group'], {})
+            yrdictyr = yrdict.get(row['year'], {})
+            if len(row['score'])>0:
+                yrdictyr[row['word']] = (float(row['score']), row['top151933'] == 'TRUE')
+                yrdict[row['year']] = yrdictyr
+                sscores[row['group']] = yrdict
+
+    #then, for these top 15, plot a scatter of differences between 1930 and 1960s embeddings vs differences in scores
+    emdifs = []
+    scores = []
+    for wrd in sscores[group2princeton]['1930']:
+            if wrd not in differences or np.isnan(differences[wrd][yr_indices[0]]) or np.isnan(differences[wrd][yr_indices[-1]]): continue
+            emdifs.append(differences[wrd][yr_indices[2]] - differences[wrd][yr_indices[0]])
+            scores.append(sscores[group2princeton]['1960'][wrd][0] - sscores[group2princeton]['1930'][wrd][0])
+            print(wrd, emdifs[-1],scores[-1])
+
+    plot_scatter_and_regression(x = np.array(scores), y = np.array(emdifs), label =  "princetontrilogy_differencesbwyears_{}{}{}".format(label, group1em, group2em), xlabel = 'Chinese Score(1967) - Score(1933)', ylabel = 'Chinese Embedding bias change')
+
+    #just do a scatter of all year scores for chinese with relevant embedding score
+    emdifs = []
+    scores = []
+    for en,yr in enumerate(yr_strings):
+        for wrd in sscores[group2princeton][yr]:
+            if wrd not in differences or np.isnan(differences[wrd][yr_indices[en]]): continue
+            emdifs.append(differences[wrd][yr_indices[en]])
+            scores.append(sscores[group2princeton][yr][wrd][0])
+            print(wrd, yr, differences[wrd][yr_indices[en]],sscores[group2princeton][yr][wrd][0])
+#     print(scores, emdifs)
+
+    plot_scatter_and_regression(x = np.array(scores), y = np.array(emdifs),label =  "princetontrilogy_allpoints_{}{}{}".format(label, group1em, group2em), xlabel = 'Princeton Trilogy Chinese Score', ylabel = 'Chinese Embedding bias')
+
+
+def plot_scatter_and_regression(x, y, label, xlabel = '', ylabel = '', sizes = None, ylim = None, xlim = None,do_regression_with_counts = False, counts = None, condensed_print = False, yrs_for_regression = None, saveformat = 'pdf', confidenceintervalsoff = False, includesquared = False):
 
     if sizes is not None:
         sizes = [np.sqrt(xx) for xx in sizes]
@@ -665,28 +745,31 @@ def plot_scatter_and_regression(x, y, label, xlabel = '', ylabel = '', sizes = N
     if len(x) == 0:
         return
 
-    scatter_kws = None
+    scatter_kws = {"s" : 20}
     if yrs_for_regression is not None:
         yrs_order = list(sorted(set(yrs_for_regression)))
         pallete = sns.color_palette("hls", len(yrs_order))
         color = [pallete[yrs_order.index(y)] for y in yrs_order]
-        scatter_kws = {'color': color}
+        scatter_kws['color']= color
 
     cistring =''
     if confidenceintervalsoff:
-        sns.regplot(x=x, y=y, scatter = True, scatter_kws = scatter_kws, ci = None)#,scatter_kws={"s": sizes})
+        sns.regplot(x=x, y=y, scatter = True, scatter_kws = scatter_kws, ci = None, truncate  = True)#,scatter_kws={"s": sizes})
+        sns.despine()
         cistring = 'noconfidenceintervals'
     else:
-        sns.regplot(x=x, y=y, scatter = True, scatter_kws = scatter_kws)#,scatter_kws={"s": sizes})
+        sns.regplot(x=x, y=y, scatter = True, scatter_kws = scatter_kws, truncate  = True)#,scatter_kws={"s": sizes})
+        sns.despine()
+
     if ylim is not None: plt.ylim(ylim)
     if xlim is not None: plt.xlim(xlim)
-
+    plt.grid(b = True)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.tight_layout()
     plt.savefig(plotsfolder + 'scatterregression_{}{}.{}'.format(label, cistring, saveformat), dpi=1000)
     plt.close()
-    print((linregress(x, y)))
+    # print((linregress(x, y)))
 
     if do_regression_with_counts:
         counts = np.array([counts[en] for en in order])
@@ -736,7 +819,12 @@ def plot_scatter_and_regression(x, y, label, xlabel = '', ylabel = '', sizes = N
         print('average residual by year:')
         for yr in list(sorted(set(yrs))):
             print('{}: {}'.format(yr, np.average([residuals[en] for en in range(len(yrs)) if yrs[en] == yr])))
-
+    elif includesquared:
+        df = pd.DataFrame([y, x, np.array([xx**2 for xx in x])])
+        df = df.transpose()
+        df.columns = [ylabel, xlabel, xlabel + '_squared']
+        df['const'] = 1
+        model = sm.OLS(df[ylabel], df[[xlabel, xlabel + '_squared', 'const']]).fit()
     else:
         df = pd.DataFrame([y, x])
         df = df.transpose()
@@ -767,3 +855,78 @@ def summarize_model(model_result):
     # merge them and unstack to obtain a hierarchically indexed series
     res_series = pd.concat([result_df, fisher_df]).unstack()
     return res_series.dropna()
+
+def plot_mean_counts_together(row, label, wordlists, printlabel):
+    mapp = {'names_chinese' : "Chinese names", 'names_white' : "White names", 'names_hispanic' :    "Hispanic names", 'names_asian' : "Asian names", 'names_black' : "Black names", 'male_pairs' : 'Words associated with Men', 'female_pairs' : 'Words associated with Women', \
+     'occupations1950': 'Occupations', 'adjectives_williamsbest': 'Adjectives from Williams and Best', 'personalitytraits_original':      'Personality Traits', 'names_russian': "Russian names",\
+    'adjectives_princeton': 'Princeton trilogy', 'adjectives_otherization' : 'Otherization adjectives', 'adjectives_appearance' : "Appearance", 'adjectives_intelligencegeneral' : "Intelligence"
+      }
+    for wordlist in wordlists:
+        means = []
+        words= []
+        all_freqs = []
+        for word in row['counts_all'][wordlist]:
+            ar = row['counts_all'][wordlist][word]
+            all_freqs.append(ar)
+        mean_freqs = np.mean(all_freqs, axis = 0)
+        print(mean_freqs)
+        plt.plot(get_years(label), mean_freqs, label = mapp.get(wordlist, wordlist), linewidth = 2, markersize = 10, marker='o')
+    plt.ylabel('Average Word Frequency')
+    plt.xlabel('Year')
+    plt.yscale('log')
+    lgd = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    plt.savefig('plots/appendix/avgfreqovertime_{}{}.pdf'.format(
+        label, printlabel), bbox_extra_artists=(lgd,), bbox_inches='tight')
+    plt.close()
+
+def plot_vector_variances_together(row, label, wordlists, printlabel):
+    mapp = {'names_chinese' : "Chinese names", 'names_white' : "White names", 'names_hispanic' :\
+     "Hispanic names", 'names_asian' : "Asian names", 'names_black' : "Black names", 'male_pairs' : 'Words associated with Men', 'female_pairs' : 'Words associated with Women', \
+     'occupations1950': 'Occupations', 'adjectives_williamsbest': 'Adjectives from Williams and Best', 'personalitytraits_original':\
+      'Personality Traits', 'names_russian': "Russian names",\
+    'adjectives_princeton': 'Princeton trilogy', 'adjectives_otherization' : 'Otherization adjectives', 'adjectives_appearance' : "Appearance", 'adjectives_intelligencegeneral' : "Intelligence"
+      }
+    for wordlist in wordlists:
+        plt.plot(get_years(label), row['variance_over_time'][wordlist], label = mapp.get(wordlist, wordlist), linewidth = 2, markersize = 10, marker='o')
+    plt.ylabel('Group vector variance')
+    plt.xlabel('Year')
+    lgd = plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    plt.savefig('plots/appendix/varianceovertime_{}{}.pdf'.format(
+        label, printlabel), bbox_extra_artists=(lgd,), bbox_inches='tight')
+    plt.close()
+
+def vocab_counts(row, label, wordlist, plot = False, indices = None):
+    mins = []
+    words= []
+    all_freqs = []
+    for word in row['counts_all'][wordlist]:
+        ar = row['counts_all'][wordlist][word]
+        if indices is None: indices = list(range(len(ar)))
+        arnonan = [a for enn,a in enumerate(ar) if enn in indices and not np.isnan(a)]
+        mins.append(min(arnonan))
+        words.append(word)
+    for en in np.argsort(mins):
+        ar = row['counts_all'][wordlist][words[en]]
+        all_freqs.append(ar)
+        arnonan = [a for enn,a in enumerate(ar) if enn in indices and not np.isnan(a)]
+        try:
+            print ('{:15s} {:6.0f} {:6.0f} {:6.0f} {}'.format(words[en], min(arnonan), max(arnonan), np.mean(arnonan), arnonan[2:6]))
+        except:
+            continue
+        if plot:
+            plt.plot(get_years(label), ar, label = word)
+    if plot:
+        plt.yscale('log')
+        plt.tight_layout()
+        plt.savefig('plots/freqovertime_{}{}.pdf'.format(
+            label, wordlist))
+        plt.close()
+    mean_freqs = np.mean(all_freqs, axis = 0)
+    print(mean_freqs)
+    if plot:
+        plt.plot(get_years(label), mean_freqs)
+        plt.yscale('log')
+        plt.tight_layout()
+        plt.savefig('plots/avgfreqovertime_{}{}.pdf'.format(
+            label, wordlist))
+        plt.close()

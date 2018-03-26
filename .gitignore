@@ -7,3 +7,6 @@
 *.png
 __pycache__*
 *.py.bak
+plots/*
+run_results/*
+regressions/*

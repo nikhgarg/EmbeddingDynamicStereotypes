@@ -176,26 +176,50 @@ def get_counts_dictionary(vocabd, neutwords):
         dwords[word] = [vocabd[en].get(word, 0) for en in range(len(vocabd))]
     return dwords
 
+def get_vector_variance(vectors_over_time, words, vocabd = None, word1lims = [50, 1e25], word2lims = [50, 1e25]):
+
+    variances = []
+    for en,vectors in enumerate(vectors_over_time):
+        validwords = []
+        for word in words:
+            if vocabd is not None and vocabd[en] is not None and word in vocabd[en] and word in vectors_over_time[en]:
+                if vocabd[en][word] < word1lims[0] or vocabd[en][word] > word1lims[1]: continue
+                validwords.append(word)
+            elif (vocabd is None or vocabd[en] is None) and word in vectors_over_time[en]:
+                validwords.append(word)
+
+        #if lengths of the valids are 0, variances are nan
+        if len(validwords) == 0:
+            variances.append(np.nan)
+        else:
+            avgvar = np.mean(np.var(np.array([vectors[word] for word in validwords]), axis = 0))
+            variances.append(avgvar)
+
+    return variances
+
 def main(filenames, label, csvname = None, neutral_lists = [], group_lists = ['male_pairs', 'female_pairs'], do_individual_group_words = False, do_individual_neutral_words = False, do_cross_individual = False):
 
-    vocabs = [fi.replace('vectors/normalized_clean/vectors', 'vectors/clean_for_pub/vocab/vocab') for fi in filenames]
+    vocabs = [fi.replace('vectors/normalized_clean/vectors', 'vectors/normalized_clean/vocab/vocab') for fi in filenames]
     vocabd = [load_vocab(fi) for fi in vocabs]
 
     d = {}
     vectors_over_time = load_vectors_over_time(filenames)
     print('vocab size: ' + str([len(v.keys()) for v in vectors_over_time]))
     d['counts_all'] = {}
+    d['variance_over_time'] = {}
 
     for grouplist in group_lists:
         with open('data/'+grouplist + '.txt', 'r') as f2:
             groupwords = [x.strip() for x in list(f2)]
             d['counts_all'][grouplist] = get_counts_dictionary(vocabd, groupwords)
+            d['variance_over_time'][grouplist] = get_vector_variance(vectors_over_time, groupwords)
 
     for neuten, neut in enumerate(neutral_lists):
         with open('data/'+neut + '.txt', 'r') as f:
             neutwords = [x.strip() for x in list(f)]
 
             d['counts_all'][neut] = get_counts_dictionary(vocabd, neutwords)
+            d['variance_over_time'][neut] = get_vector_variance(vectors_over_time, neutwords)
 
             dloc_neutral = {}
 
@@ -243,15 +267,14 @@ def main(filenames, label, csvname = None, neutral_lists = [], group_lists = ['m
 
 folder = '../vectors/normalized_clean/'
 
+filenames_nyt = [folder + 'vectorsnyt{}-{}.txt'.format(x, x+3) for x in range(1987, 2005, 1)]
 filenames_sgns = [folder + 'vectors_sgns{}.txt'.format(x) for x in range(1910, 2000, 10)]
 filenames_svd = [folder + 'vectors_svd{}.txt'.format(x) for x in range(1910, 2000, 10)]
-filenames_coha = [folder + 'vectorscoha{}-{}.txt'.format(x, x+20) for x in range(1910, 2000, 10)]
-
 filenames_google = [folder + 'vectorsGoogleNews_exactclean.txt']
 filenames_wikipedia = [folder + 'vectorswikipedia.txt']
 filenames_commoncrawl = [folder + 'vectorscommoncrawlglove.txt']
 
-filename_map = {'sgns' : filenames_sgns, 'svd': filenames_svd, 'coha':filenames_coha, 'google':filenames_google, 'wikipedia':filenames_wikipedia, 'commoncrawlglove':filenames_commoncrawl}
+filename_map = {'nyt' : filenames_nyt, 'sgns' : filenames_sgns, 'svd': filenames_svd, 'google':filenames_google, 'wikipedia':filenames_wikipedia, 'commoncrawlglove':filenames_commoncrawl}
 
 if __name__ == "__main__":
     param_filename = 'run_params.csv'
