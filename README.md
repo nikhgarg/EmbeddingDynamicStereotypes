@@ -1,13 +1,13 @@
-This repository contains code and data associated with [Word embeddings quantify 100 years of gender and ethnic stereotypes](https://doi.org/10.1073/pnas.1720347115)
+This repository contains code and data associated with [Word embeddings quantify 100 years of gender and ethnic stereotypes.](https://doi.org/10.1073/pnas.1720347115). PDF available [here](http://gargnikhil.com/files/pdfs/GSJZ18_embedstereotypes.pdf).
 
 If you use the content in this repository, please cite:
 
-1.Garg, N., Schiebinger, L., Jurafsky, D. & Zou, J. Word embeddings quantify 100 years of gender and ethnic stereotypes. PNAS 201720347 (2018). doi:10.1073/pnas.1720347115
+Garg, N., Schiebinger, L., Jurafsky, D. & Zou, J. Word embeddings quantify 100 years of gender and ethnic stereotypes. PNAS 201720347 (2018). doi:10.1073/pnas.1720347115
 
 
 
 To re-run all analyses and plots:
-1. download vectors from online sources and normalize by l2 norm (links in paper)
+1. download vectors from online sources and normalize by l2 norm (links in paper and below)
 2. set up parameters to run as in run_params.csv
 3. run changes_over_time.py
 4. run create_final_plots_all.py 
@@ -16,7 +16,7 @@ dataset_utilities/ contains various helper scripts to preprocess files and creat
 
 We use the following embeddings publicly available online. If you use these embeddings, please cite the associated papers.
 
-1. [Google News word2vec](https://code.google.com/archive/p/word2vec/)
+1. [Google News, word2vec](https://code.google.com/archive/p/word2vec/)
 2. [Genre-Balanced American English (1830s-2000s), SGNS and SVD](https://nlp.stanford.edu/projects/histwords/)
 3. [Wikipedia, GloVe](https://nlp.stanford.edu/projects/glove/) 
 
