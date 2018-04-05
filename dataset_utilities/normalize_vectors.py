@@ -9,7 +9,7 @@ def load_vectors(filename):
 		reader = csv.reader(f, delimiter = ' ')
 		for row in reader:
 			word = re.sub('[^a-z]+', '', row[0].strip().lower())
-			if len(word < 2): continue
+			if len(word) < 2: continue
 			vectors[word] = [float(x) for x in row[1:] if len(x) >0]
 	return vectors
 
