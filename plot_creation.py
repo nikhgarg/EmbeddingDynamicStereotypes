@@ -17,7 +17,7 @@ from scipy.stats import kendalltau
 import copy
 import scipy
 from scipy.stats.stats import pearsonr
-
+from  more_itertools import unique_everseen
 sns.set(style="whitegrid") #TODO test this whitegrid, otherwise remove
 
 plotsfolder = 'plots/final/'
@@ -132,30 +132,45 @@ def plot_averagebias_over_time_consistentoccupations(row, label='', neutral_word
         label, neutral_words, limit_words_file, group1, group2,normalize_by_pairsdist, occfuncstr, 'norm'))
     plt.close()
 
-def identify_top_biases_individual_threegroups(row, label='', neutral_words='', group1='names_hispanic', group2='names_white', group3 = 'names_asian', index = -1):
+def identify_top_biases_individual_threegroups(row, label='', neutral_words='', group1='names_hispanic', group2='names_white', group3 = 'names_asian', indices = [-1]):
     occups_valid = []
-    occup_differences_group1 = []
-    occup_differences_group2 = []
-    occup_differences_group3 = []
+
 
     yrs = get_years(label)
+    print(label, yrs)
 
-    for occup in row['indiv_distances_neutral_{}'.format(neutral_words)]:
-        distgroup1 = row['indiv_distances_neutral_{}'.format(neutral_words)][occup][group1 + ''][4][index]
-        distgroup2 = row['indiv_distances_neutral_{}'.format(neutral_words)][occup][group2 + ''][4][index]
-        distgroup3 = row['indiv_distances_neutral_{}'.format(neutral_words)][occup][group3 + ''][4][index]
+    for index in indices:
+        occup_differences_group1 = []
+        occup_differences_group2 = []
+        occup_differences_group3 = []
+        # print(yrs[index])
+        for occup in row['indiv_distances_neutral_{}'.format(neutral_words)]:
+            distgroup1 = row['indiv_distances_neutral_{}'.format(neutral_words)][occup][group1 + ''][4][index]
+            distgroup2 = row['indiv_distances_neutral_{}'.format(neutral_words)][occup][group2 + ''][4][index]
+            distgroup3 = row['indiv_distances_neutral_{}'.format(neutral_words)][occup][group3 + ''][4][index]
 
-        if any(np.isnan([distgroup1, distgroup2, distgroup2])): continue
-        occups_valid.append(occup)
-        occup_differences_group1.append(distgroup1 - .5*(distgroup2 + distgroup3))
-        occup_differences_group2.append(distgroup2 - .5*(distgroup3 + distgroup1))
-        occup_differences_group3.append(distgroup3 - .5*(distgroup2 + distgroup1))
+            if any(np.isnan([distgroup1, distgroup2, distgroup2])): continue
+            occups_valid.append(occup)
+            occup_differences_group1.append(distgroup1 - .5*(distgroup2 + distgroup3))
+            occup_differences_group2.append(distgroup2 - .5*(distgroup3 + distgroup1))
+            occup_differences_group3.append(distgroup3 - .5*(distgroup2 + distgroup1))
 
-    print('3 way group comparison')
-    print('most {}: {}'.format(group1, [occups_valid[en] for en in np.argsort(occup_differences_group1)[0:15]]))
-    print('most {}: {}'.format(group2, [occups_valid[en] for en in np.argsort(occup_differences_group2)[0:15]]))
-    print('most {}: {}'.format(group3, [occups_valid[en] for en in np.argsort(occup_differences_group3)[0:15]]))
+        # print('3 way group comparison')
+        # print('most {}: {}'.format(group1, [occups_valid[en] for en in np.argsort(occup_differences_group1)[0:15]]))
+        # print('most {}: {}'.format(group2, [occups_valid[en] for en in np.argsort(occup_differences_group2)[0:15]]))
+        # print('most {}: {}'.format(group3, [occups_valid[en] for en in np.argsort(occup_differences_group3)[0:15]]))
 
+        group1order = list(unique_everseen([occups_valid[en] for en in np.argsort(occup_differences_group1)[0:15]]))
+        group2order = list(unique_everseen([occups_valid[en] for en in np.argsort(occup_differences_group2)[0:15]]))
+        group3order = list(unique_everseen([occups_valid[en] for en in np.argsort(occup_differences_group3)[0:15]]))
+
+        tab = "\\begin{table}%{width=\\linewidth}\n\\centering\n\\begin{tabular}{ccc}\n"
+        tab+='Hispanic & White & Asian \\\\\\hline\n'
+        for i in range(10):
+            tab += "{} & {} & {} \\\\\n".format(group1order[i],group2order[i],group3order[i])
+        tab+= "\\end{tabular}\n\\caption{Top adjectives associated with each ethnicity in " + str(yrs[index]) + " in the COHA embedding. }\n\\label{tab:mostwomanadjectives191019501990}\n\\end{table}%\hfill"
+
+        print(tab)
 
 def print_most_biased_over_time(row, label='', neutral_words='', group1='male', group2='female'):
     top_changes, top_changes_cossim, top_in_last = identify_top_biases_individual(row, label, neutral_words, group1, group2, printovertime = True)
@@ -208,7 +223,7 @@ def identify_top_biases_individual(row, label='', neutral_words='', group1='male
 
         occup_differences_cossim.append(dif[firstindex] - dif[-1])
 
-    yrs = get_years_single(label)
+    yrs = get_years(label)
     if yrs is not None:
         occup_raw_cossim_allovertime =   np.asarray(occup_raw_cossim_allovertime).T.tolist()
         occup_raw_allovertime =   np.asarray(occup_raw_allovertime).T.tolist()
@@ -522,7 +537,7 @@ def overtime_scatter_errorusingallotheryears(x, y, years_all, label, xlabel='', 
 def residual_analysis_with_stereotypes(row, label, neutral_list_name = 'occupations1950', group1 = 'male_pairs', group2 = 'female_pairs',  occ_percents_file='data/occupation_percentages_gender_occ1950.csv', load_objective_data = load_occupationpercent_data, occ_func=occupation_func_female_percent, stereotype_file = 'data/mturk_stereotypes.csv', load_stereotype_data = load_mturkstereotype_data, norm_type = 'norm', saveformat = 'pdf'):
 
     differences, differences_cossim = get_biases_individual(row, label=label, neutral_words=neutral_list_name, group1=group1, group2=group2)
-    occpercents, occ_weights = load_objective_data(occ_percents_file, occ_func, yrs_to_do=get_years_single(label))
+    occpercents, occ_weights = load_objective_data(occ_percents_file, occ_func, yrs_to_do=get_years(label))
     stereotypescores = load_mturkstereotype_data(stereotype_file)
 
     limitto = [o.strip() for o in list(open('data/' + 'occupationsMturk' + '.txt', 'r'))]
@@ -543,15 +558,15 @@ def residual_analysis_with_stereotypes(row, label, neutral_list_name = 'occupati
             occupations_in_order.append(occ)
 
     #scatter limited occupations (for which have turk scores): embeddings bias vs occupation percent
-    plot_scatter_and_regression(occ_props, embedding_difs,'{}{}_distancedifferencessameyear_vs_percents_{}{}{}{}'.format(label, get_years_single(label)[-1],neutral_list_name, group1, group2, 'occupationsMturk'),sizes = None,  ylabel = '{} Bias'.format(pretty_axis_labels[group2]), xlabel = occ_func.label, xlim = None\
+    plot_scatter_and_regression(occ_props, embedding_difs,'{}{}_distancedifferencessameyear_vs_percents_{}{}{}{}'.format(label, get_years(label)[-1],neutral_list_name, group1, group2, 'occupationsMturk'),sizes = None,  ylabel = '{} Bias'.format(pretty_axis_labels[group2]), xlabel = occ_func.label, xlim = None\
     , ylim = None, do_regression_with_counts = False, counts = None, condensed_print = False, saveformat = saveformat, includesquared = False)
 
     #scatter stereotype score vs occupation proportion
-    plot_scatter_and_regression(occ_props,stereotype_scores,'{}{}turkstereotypescores_vs_percents_{}{}{}'.format(label, get_years_single(label)[-1],neutral_list_name, group1, group2),sizes = None,  ylabel = 'Stereotype Score', xlabel = occ_func.label, xlim = None\
+    plot_scatter_and_regression(occ_props,stereotype_scores,'{}{}turkstereotypescores_vs_percents_{}{}{}'.format(label, get_years(label)[-1],neutral_list_name, group1, group2),sizes = None,  ylabel = 'Stereotype Score', xlabel = occ_func.label, xlim = None\
     , ylim = None, do_regression_with_counts = False, counts = None, condensed_print = False, saveformat = saveformat, includesquared = False)
 
     #scatter stereotype score vs embedding bias
-    plot_scatter_and_regression(stereotype_scores, embedding_difs,'{}{}turkstereotypescores_vs_embedding_{}{}{}'.format(label, get_years_single(label)[-1],neutral_list_name, group1, group2),sizes = None,  ylabel = '{} Bias'.format(pretty_axis_labels[group2]), xlabel = "Stereotype Score", ylim = [-.15, .15]\
+    plot_scatter_and_regression(stereotype_scores, embedding_difs,'{}{}turkstereotypescores_vs_embedding_{}{}{}'.format(label, get_years(label)[-1],neutral_list_name, group1, group2),sizes = None,  ylabel = '{} Bias'.format(pretty_axis_labels[group2]), xlabel = "Stereotype Score", ylim = [-.15, .15]\
     , xlim = None, do_regression_with_counts = False, counts = None, condensed_print = False, saveformat = saveformat, includesquared = False)
 
     print('occupations: ', str(occupations_in_order))
@@ -598,7 +613,7 @@ def residual_analysis_with_stereotypes(row, label, neutral_list_name = 'occupati
 def scatter_occupation_percents_distances(row, label, neutral_list_name = 'occupations1950', group1 = 'male_pairs', group2 = 'female_pairs', index = 0, occ_percents_file='data/occupation_percentages_gender_occ1950.csv', load_objective_data = load_occupationpercent_data, occ_func=occupation_func_female_percent, ylim = [-6, 6], xlim = [-.15, .15], do_regression_with_counts = False, condensed_print = False, norm_type = 'norm', saveformat = 'pdf', toskip = [], limitfile = None):
 
     differences, differences_cossim = get_biases_individual(row, label=label, neutral_words=neutral_list_name, group1=group1, group2=group2)
-    occpercents, occ_weights = load_objective_data(occ_percents_file, occ_func, yrs_to_do=get_years_single(label))
+    occpercents, occ_weights = load_objective_data(occ_percents_file, occ_func, yrs_to_do=get_years(label))
 
     if do_regression_with_counts:
         counts_occupations = row['counts_all'][neutral_list_name]
@@ -636,11 +651,11 @@ def scatter_occupation_percents_distances(row, label, neutral_list_name = 'occup
     print('most y axis negative: {}'.format([(occupations_in_order[en], scatter_vals[0][en], scatter_vals[1][en]) for en in np.argsort(scatter_vals[0])[0:5]]))
 
     if norm_type == 'norm':
-        plot_scatter_and_regression(scatter_vals[1],scatter_vals[0],'{}{}_distancedifferencessameyear_vs_percents_{}{}{}{}{}'.format(label, get_years_single(label)[index],neutral_list_name, group1, group2, limitfile,occ_func.savelabel),sizes = scatter_sizes,  ylabel = '{} Bias'.format(pretty_axis_labels[group2]), xlabel = occ_func.label, ylim = ylim, xlim = xlim, do_regression_with_counts = do_regression_with_counts, counts = occ_freq_counts, condensed_print = condensed_print, saveformat = saveformat)
+        plot_scatter_and_regression(scatter_vals[1],scatter_vals[0],'{}{}_distancedifferencessameyear_vs_percents_{}{}{}{}{}'.format(label, get_years(label)[index],neutral_list_name, group1, group2, limitfile,occ_func.savelabel),sizes = scatter_sizes,  ylabel = '{} Bias'.format(pretty_axis_labels[group2]), xlabel = occ_func.label, ylim = ylim, xlim = xlim, do_regression_with_counts = do_regression_with_counts, counts = occ_freq_counts, condensed_print = condensed_print, saveformat = saveformat)
         return scatter_vals[0]
 
     else:
-        plot_scatter_and_regression(scatter_vals_cossim[0], scatter_vals_cossim[1],'{}{}_distancedifferencessameyear_vs_percents_{}{}{}_{}'.format(label, get_years_single(label)[index],neutral_list_name, group1, group2, 'cossim'),sizes = scatter_sizes,  xlabel = '{} Bias'.format(pretty_axis_labels[group2]), ylabel = occ_func.label, ylim = ylim, xlim = None, do_regression_with_counts = do_regression_with_counts, counts = occ_freq_counts, condensed_print = condensed_print, saveformat = saveformat)
+        plot_scatter_and_regression(scatter_vals_cossim[0], scatter_vals_cossim[1],'{}{}_distancedifferencessameyear_vs_percents_{}{}{}_{}'.format(label, get_years(label)[index],neutral_list_name, group1, group2, 'cossim'),sizes = scatter_sizes,  xlabel = '{} Bias'.format(pretty_axis_labels[group2]), ylabel = occ_func.label, ylim = ylim, xlim = None, do_regression_with_counts = do_regression_with_counts, counts = occ_freq_counts, condensed_print = condensed_print, saveformat = saveformat)
         return scatter_vals_cossim[0]
 
 def get_highest_residual_occupations(distances, percents, group1, group2, occupations_in_order):
