@@ -12,7 +12,7 @@ To re-run all analyses and plots:
 
 dataset_utilities/ contains various helper scripts to preprocess files and create word vectors. From a corpus, for example LDC95T21-North-American-News, that contains many text files (each containing an article) from a given year, first run create_yrly_datasets.py to create a single text file per year (with only valid words). Then, run pipeline.py on each of these files to create vectors, potentially combining multiple years into a single training set. normalize_vectors.py contains utilities to standardize the vectors.
 
-We have uploaded the New York Times embeddings generated for this paper. They are available at [http://stanford.edu/~nkgarg/NYTembeddings/](http://stanford.edu/~nkgarg/NYTembeddings/). 2021/04/05 update: Unfortunately, the files are no longer available. (Upon my graduation the links died, before I was able to back them up). However, the original text data is still available at [New York Times Annotated Corpus](https://catalog.ldc.upenn.edu/ldc2008t19), and so the the vectors can be trained as described in the paper. 
+We have uploaded the New York Times embeddings generated for this paper. They are available at [http://stanford.edu/~nkgarg/NYTembeddings/](http://stanford.edu/~nkgarg/NYTembeddings/). 2021/04/05 update: Unfortunately, the files are no longer available. (Upon my graduation the links died, before I was able to back them up). However, the original text data is still available at [New York Times Annotated Corpus](https://catalog.ldc.upenn.edu/LDC2008T19), and so the the vectors can be trained as described in the paper. 
 
 We use the following embeddings publicly available online. If you use these embeddings, please cite the associated papers.
 
